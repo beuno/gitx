@@ -11,6 +11,8 @@
 #import "PBGitWindowController.h"
 #import "PBRepositoryDocumentController.h"
 #import "PBCLIProxy.h"
+#import "PBPrefsWindowController.h"
+#import "PBNSURLPathUserDefaultsTransfomer.h"
 
 @implementation ApplicationController
 @synthesize cliProxy;
@@ -28,6 +30,10 @@
 		self.cliProxy = [PBCLIProxy new];
 	}
 
+	/* Value Transformers */
+	NSValueTransformer *transformer = [[PBNSURLPathUserDefaultsTransfomer alloc] init];
+	[NSValueTransformer setValueTransformer:transformer forName:@"PBNSURLPathUserDefaultsTransfomer"];
+	
 	return self;
 }
 
@@ -53,6 +59,11 @@
 - (void) windowWillClose: sender
 {
 	[firstResponder terminate: sender];
+}
+
+- (IBAction)openPreferencesWindow:(id)sender
+{
+	[[PBPrefsWindowController sharedPrefsWindowController] showWindow:nil];
 }
 
 - (IBAction)installCliTool:(id)sender;

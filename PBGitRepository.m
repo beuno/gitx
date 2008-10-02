@@ -24,32 +24,54 @@ static NSString* gitPath;
 
 + (void) initialize
 {
-	// Try to find the path of the Git binary
-	char* path = getenv("GIT_PATH");
-	if (path != nil) {
-		gitPath = [NSString stringWithCString:path];
-		return;
-	}
-	
-	// No explicit path. Try it with "which"
-	gitPath = [PBEasyPipe outputForCommand:@"/usr/bin/which" withArgs:[NSArray arrayWithObject:@"git"]];
+	// Check what we might have in user defaults
+	// NOTE: Currently this should NOT have a registered default, or the searching bits below won't work
+	gitPath = [[NSUserDefaults standardUserDefaults] stringForKey:@"gitExecutable"];
 	if (gitPath.length > 0)
 		return;
 	
+	// Did not find a preference that told us where git is, try to find it in the filesystem instead
+	gitPath = [self findGit];
+	
+	if(gitPath == nil)
+	{
+		NSLog(@"Could not find a git binary!");
+	}
+}
+
++ (NSString*) findGit
+{
+	// Try to find the path of the Git binary
+	char* cpath = getenv("GIT_PATH");
+	if (cpath != nil) {
+		return [NSString stringWithCString:cpath];
+	}
+	
+	NSString *path;
+	// No explicit path. Try it with "which"
+	path = [PBEasyPipe outputForCommand:@"/usr/bin/which" withArgs:[NSArray arrayWithObject:@"git"]];
+	if (path.length > 0)
+		return path;
+	
 	// Still no path. Let's try some default locations.
 	NSArray* locations = [NSArray arrayWithObjects:@"/opt/local/bin/git",
-												   @"/sw/bin/git",
-												   @"/opt/git/bin/git",
-												   @"/usr/local/bin/git",
-												   nil];
+						  @"/sw/bin/git",
+						  @"/opt/git/bin/git",
+						  @"/usr/local/bin/git",
+						  nil];
 	for (NSString* location in locations) {
 		if ([[NSFileManager defaultManager] fileExistsAtPath:location]) {
-			gitPath = location;
-			return;
+			return location;
 		}
 	}
 	
-	NSLog(@"Could not find a git binary!");
+	return nil;
+}
+
++ (BOOL) validateGit:(NSString *)path
+{
+	NSString *output = [PBEasyPipe outputForCommand:path withArgs:[NSArray arrayWithObject:@"--version"]];
+	return [output hasPrefix:@"git version"];
 }
 
 - (BOOL)readFromData:(NSData *)data ofType:(NSString *)typeName error:(NSError **)outError
